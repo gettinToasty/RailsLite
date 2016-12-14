@@ -1,6 +1,7 @@
 require 'rack'
 require 'session'
 require 'controller_base'
+require 'byebug'
 
 describe Session do
   let(:req) { Rack::Request.new({'rack.input' => {}}) }
@@ -39,7 +40,7 @@ describe Session do
     context "with cookies in request" do
       before(:each) do
         cook = {'_rails_lite_app' => { 'pho' =>  "soup" }.to_json }
-        req.cookies.merge!(cook)
+        merge = req.cookies.merge!(cook)
       end
 
       it "reads the pre-existing cookie data into hash" do

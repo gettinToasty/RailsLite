@@ -1,15 +1,17 @@
 require 'active_support'
 require 'active_support/core_ext'
 require 'erb'
+require 'active_support/inflector'
 require_relative './session'
 
 class ControllerBase
   attr_reader :req, :res, :params
 
   # Setup the controller
-  def initialize(req, res)
+  def initialize(req, res, params)
     @req = req
     @res = res
+    @params = params.merge(req.params)
   end
 
   # Helper method to alias @already_built_response
@@ -22,6 +24,7 @@ class ControllerBase
     raise if already_built_response?
     @res['Location'] = url
     @res.status = 302
+    session.store_session(@res)
     @already_built_response = true
   end
 
@@ -32,19 +35,30 @@ class ControllerBase
     raise if already_built_response?
     @res['Content-Type'] = content_type
     @res.body = [content]
+    session.store_session(@res)
     @already_built_response = true
   end
 
   # use ERB and binding to evaluate templates
   # pass the rendered html to render_content
   def render(template_name)
+    @res['Path'] = "views/#{self.class.to_s.underscore}/#{template_name}.html.erb"
+    template = File.read(@res['Path'])
+    template = ERB.new(template)
+    content = template.result(binding)
+    render_content(content, 'text/html')
   end
 
   # method exposing a `Session` object
   def session
+    @session ||= Session.new(@req)
   end
 
   # use this with the router to call action_name (:index, :show, :create...)
   def invoke_action(name)
+    self.send(name)
+    render(name) unless already_built_response?
   end
+
+
 end
